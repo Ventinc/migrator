@@ -1,0 +1,44 @@
+{
+  "name": "@ventinc/pg-migrations",
+  "version": "1.0.0",
+  "description": "A simple library to make migrations with postgres",
+  "main": "index.js",
+  "scripts": {
+    "prebuild": "rimraf dist",
+    "build": "tsc",
+    "test:docker": "jest",
+    "test": "docker-compose -f docker-compose.yml -f docker-compose-test.yml build && docker-compose -f docker-compose.yml -f docker-compose-test.yml run --rm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ventinc/pg-migrations.git"
+  },
+  "keywords": [
+    "postgresql",
+    "node-postgres",
+    "migrations"
+  ],
+  "author": "Vincent Dusautoir",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Ventinc/pg-migrations/issues"
+  },
+  "homepage": "https://github.com/Ventinc/pg-migrations#readme",
+  "devDependencies": {
+    "@types/app-root-path": "^1.2.4",
+    "@types/fs-extra": "^8.1.0",
+    "@types/jest": "^25.2.1",
+    "@types/node": "^13.13.4",
+    "@types/pg": "^7.14.3",
+    "fs-extra": "^9.0.0",
+    "jest": "^25.5.1",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^25.4.0",
+    "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "app-root-path": "^3.0.0",
+    "clear-module": "^4.1.1",
+    "pg": "^8.0.3"
+  }
+}

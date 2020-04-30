@@ -1,0 +1,11 @@
+version: "3.4"
+services:
+  pg:
+    image: postgres:11
+    restart: always
+    environment:
+      POSTGRES_DB: pgmigrations
+      POSTGRES_USER: pgmigrations
+      POSTGRES_PASSWORD: password
+    ports:
+      - 5432:5432
