@@ -1,21 +1,34 @@
 import { path as rootPath } from "app-root-path";
 import { Pool, PoolConfig } from "pg";
 import { PlatformTools } from "./utils";
-import path from "path";
+import { join } from "path";
 import { readdirSync, existsSync } from "fs";
+import { Migration } from "./Migration";
 
-interface migrationConfig {
+interface MigrationConfig {
   name: string;
-  tableName?: string;
   folder: string;
+}
+
+type ContainedType<T> = { new (...args: any[]): T } | Function;
+
+interface MigrationInformation {
+  name: string;
+  timestamp: number;
+  instance: Migration;
 }
 
 export class Migrator {
   private connectionPool: Pool;
 
-  private config: { connection: PoolConfig; types: migrationConfig[] };
+  private config: { connection: PoolConfig; types: MigrationConfig[] };
 
-  constructor(protected options?: { root?: string; configName?: string }) {}
+  constructor(protected options?: { root?: string; configName?: string }) {
+    this.config = {
+      connection: {},
+      types: [],
+    };
+  }
 
   async boot() {
     this.loadConfig();
@@ -27,13 +40,41 @@ export class Migrator {
     const root = this.options?.root ?? rootPath;
     const configName = this.options?.configName ?? "migrations.config.js";
 
-    this.config = PlatformTools.esmRequire(path.join(root, configName));
+    this.config = PlatformTools.esmRequire(join(root, configName));
   }
 
-  private async runUp() {}
+  private async runUp(
+    migrations: MigrationInformation[],
+    type: MigrationConfig
+  ) {
+    const alreadyMigrated = await this.getMigrated(type.name);
 
-  private async runDown(batch: number) {
-    console.log(batch);
+    const toMigrate = migrations.filter(
+      (migration) => !alreadyMigrated.includes(migration.name)
+    );
+
+    for (const migration of toMigrate) {
+      await migration.instance.up({} as any);
+
+      await this.insertMigration(type.name, migration.name);
+    }
+  }
+
+  private async runDown(
+    migrations: MigrationInformation[],
+    batch: number,
+    type: MigrationConfig
+  ) {
+    const alreadyMigrated = (await this.getMigrated(type.name)).slice(0, batch);
+    const toMigrate = migrations.filter((migration) =>
+      alreadyMigrated.includes(migration.name)
+    );
+
+    for (const migration of toMigrate) {
+      await migration.instance.down({} as any);
+
+      await this.removeMigration(type.name, migration.name);
+    }
   }
 
   async executeMigrations(
@@ -41,12 +82,17 @@ export class Migrator {
     name: string = "migrations",
     batch: number = 1
   ) {
-    await this.loadMigrations();
+    const type = this.getType(name);
+
+    if (!type) {
+      throw new Error(`No configuration named: "${name}"`);
+    }
+    const migrations = await this.getMigrations(type);
 
     if (direction === "up") {
-      await this.runUp();
+      await this.runUp(migrations, type);
     } else {
-      await this.runDown(batch);
+      await this.runDown(migrations, batch, type);
     }
   }
 
@@ -54,22 +100,73 @@ export class Migrator {
     console.log(`create migration ${name}`);
   }
 
+  private async insertMigration(tableName: string, name: string) {
+    const query = `INSERT INTO ${tableName}(name) VALUES ($1)`;
+
+    await this.connectionPool.query(query, [name]);
+  }
+
+  private async removeMigration(tableName: string, name: string) {
+    const query = `DELETE FROM ${tableName} WHERE name=$1`;
+
+    await this.connectionPool.query(query, [name]);
+  }
+
   private async makeTables() {
     for (const type of this.config.types) {
-      const query = `CREATE TABLE IF NOT EXISTS ${type.tableName ?? type.name} (
+      const query = `CREATE TABLE IF NOT EXISTS ${type.name} (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
-        migration_time DATE NOT NULL DEFAULT now()
+        timestamp DATE NOT NULL DEFAULT now()
       )`;
 
       await this.connectionPool.query(query);
     }
   }
 
-  private async loadMigrations(name: string = "migrations") {
-    const type = this.config.types.find((type) => type.name === name);
-    if (type && type.folder && existsSync(type.folder)) {
-      console.log(readdirSync(type.folder));
+  private getType(name: string) {
+    return this.config.types.find((type) => type.name === name);
+  }
+
+  private async getMigrated(tableName: string): Promise<string[]> {
+    const query = `SELECT name FROM ${tableName} ORDER BY timestamp DESC`;
+
+    const result = await this.connectionPool.query(query);
+
+    return result.rows.map((row) => row.name);
+  }
+
+  private async getMigrations(
+    type: MigrationConfig
+  ): Promise<MigrationInformation[]> {
+    const { folder, name: tableName } = type;
+
+    if (existsSync(folder)) {
+      const files = readdirSync(folder);
+
+      const migrations: MigrationInformation[] = files.map((file) => {
+        const source: ContainedType<Migration> = PlatformTools.esmRequire(
+          join(folder, file)
+        );
+        const name: string = source.name ?? (source.constructor as any).name;
+        const timestamp = parseInt(name.substr(-13));
+
+        if (!timestamp || isNaN(timestamp)) {
+          throw new Error(
+            `${name} migration name is wrong. Migration class name or string name should have a timestamp suffix.`
+          );
+        }
+
+        return {
+          name,
+          instance: new (source as new () => Migration)(),
+          timestamp,
+        };
+      });
+
+      return migrations.sort((a, b) => a.timestamp - b.timestamp);
     }
+
+    return [];
   }
 }

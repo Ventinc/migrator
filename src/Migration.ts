@@ -1,6 +1,13 @@
-export interface Migration {
+import { Client } from "pg";
+
+export class Migration {
   name?: string;
 
-  up(): () => Promise<void>;
-  down(): () => Promise<void>;
+  public async up(client: Client) {
+    console.error("No up");
+  }
+
+  public async down(client: Client) {
+    console.error("No down");
+  }
 }

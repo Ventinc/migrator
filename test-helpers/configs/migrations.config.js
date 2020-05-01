@@ -11,7 +11,6 @@ module.exports = {
   types: [
     {
       name: "migrations",
-      dbName: "migrations",
       folder: fs.basePath,
     },
   ],

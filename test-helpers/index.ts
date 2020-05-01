@@ -53,7 +53,7 @@ export class FileSystem {
   }
 }
 
-export const fs = new FileSystem(join(__dirname, "migrations"));
+export const fs = new FileSystem(join(tmpdir(), "migrations"));
 
 export function getDb() {
   return new Pool({
@@ -80,13 +80,16 @@ export function getMigratorMultiple() {
 }
 
 export async function cleanup() {
+  fs.cleanup();
   const db = getDb();
 
   const result = await db.query(
     "select 'drop table if exists \"' || tablename || '\" cascade;' as query from pg_tables WHERE schemaname = 'public';"
   );
 
-  result.rows.map(async (row) => await db.query(row.query));
+  for (const row of result.rows) {
+    await db.query(row.query);
+  }
 
   await db.end();
 }
