@@ -1,7 +1,6 @@
 import fsExtra from "fs-extra";
 import { join, isAbsolute } from "path";
 import { tmpdir } from "os";
-import { path as rootPath } from "app-root-path";
 import { PoolConfig, Pool } from "pg";
 import { Migrator } from "../src/Migrator";
 
@@ -54,27 +53,7 @@ export class FileSystem {
   }
 }
 
-export const fs = new FileSystem(rootPath);
-
-export async function createConfig() {
-  try {
-    await fs.add(
-      "migrations.config.js",
-      "\
-      module.exports = {\
-        poolConnection: undefined,\
-        migrationFolder: `${__dirname}/migrations`\
-      }\
-      "
-    );
-  } catch (err) {
-    throw err;
-  }
-}
-
-export async function setup() {
-  await createConfig();
-}
+export const fs = new FileSystem(join(__dirname, "migrations"));
 
 export function getDb() {
   return new Pool({
@@ -90,6 +69,13 @@ export function getMigrator() {
   return new Migrator({
     root: __dirname,
     configName: "configs/migrations.config.js",
+  });
+}
+
+export function getMigratorMultiple() {
+  return new Migrator({
+    root: __dirname,
+    configName: "configs/multitable.config.js",
   });
 }
 

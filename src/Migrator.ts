@@ -2,22 +2,25 @@ import { path as rootPath } from "app-root-path";
 import { Pool, PoolConfig } from "pg";
 import { PlatformTools } from "./utils";
 import path from "path";
-import fs from "fs";
+import { readdirSync, existsSync } from "fs";
+
+interface migrationConfig {
+  name: string;
+  tableName?: string;
+  folder: string;
+}
 
 export class Migrator {
-  private migrationTable = "migrations";
-
   private connectionPool: Pool;
 
-  private config: { connection: PoolConfig; migrationsFolder: string };
+  private config: { connection: PoolConfig; types: migrationConfig[] };
 
   constructor(protected options?: { root?: string; configName?: string }) {}
 
   async boot() {
     this.loadConfig();
-    console.log(this.config.connection);
     this.connectionPool = new Pool(this.config.connection);
-    await this.makeMigrationTable();
+    await this.makeTables();
   }
 
   loadConfig() {
@@ -27,14 +30,19 @@ export class Migrator {
     this.config = PlatformTools.esmRequire(path.join(root, configName));
   }
 
-  async runUp() {}
+  private async runUp() {}
 
-  async runDown(batch: number) {
+  private async runDown(batch: number) {
     console.log(batch);
   }
 
-  async executeMigrations(direction: "up" | "down" = "up", batch: number = 1) {
-    await this.makeMigrationTable();
+  async executeMigrations(
+    direction: "up" | "down" = "up",
+    name: string = "migrations",
+    batch: number = 1
+  ) {
+    await this.loadMigrations();
+
     if (direction === "up") {
       await this.runUp();
     } else {
@@ -46,13 +54,22 @@ export class Migrator {
     console.log(`create migration ${name}`);
   }
 
-  private async makeMigrationTable() {
-    const query = `CREATE TABLE IF NOT EXISTS ${this.migrationTable} (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(100) UNIQUE NOT NULL, 
-      migration_time DATE NOT NULL DEFAULT now()
-    )`;
+  private async makeTables() {
+    for (const type of this.config.types) {
+      const query = `CREATE TABLE IF NOT EXISTS ${type.tableName ?? type.name} (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        migration_time DATE NOT NULL DEFAULT now()
+      )`;
 
-    await this.connectionPool.query(query);
+      await this.connectionPool.query(query);
+    }
+  }
+
+  private async loadMigrations(name: string = "migrations") {
+    const type = this.config.types.find((type) => type.name === name);
+    if (type && type.folder && existsSync(type.folder)) {
+      console.log(readdirSync(type.folder));
+    }
   }
 }

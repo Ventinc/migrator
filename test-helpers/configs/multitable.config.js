@@ -14,5 +14,10 @@ module.exports = {
       dbName: "migrations",
       folder: fs.basePath,
     },
+    {
+      name: "seeds",
+      dbName: "seeds",
+      folder: fs.basePath,
+    },
   ],
 };

@@ -1,5 +1,11 @@
 import { Migrator } from "../../src/Migrator";
-import { getDb, getMigrator, cleanup } from "../../test-helpers";
+import {
+  getDb,
+  getMigrator,
+  cleanup,
+  fs,
+  getMigratorMultiple,
+} from "../../test-helpers";
 
 describe("Config Reader", () => {
   beforeEach(() => {
@@ -34,6 +40,7 @@ let db: ReturnType<typeof getDb>;
 describe("Migrator", () => {
   beforeAll(async () => {
     db = getDb();
+    fs.ensureDir();
   });
 
   afterAll(async () => {
@@ -45,7 +52,7 @@ describe("Migrator", () => {
     await cleanup();
   });
 
-  test("Create database on boot", async () => {
+  test("Create migrations database on boot", async () => {
     const migrator = getMigrator();
 
     await migrator.boot();
@@ -55,5 +62,17 @@ describe("Migrator", () => {
     );
 
     expect(result.rows[0].count).toBe("1");
+  });
+
+  test("Create multiple database on boot", async () => {
+    const migrator = getMigratorMultiple();
+
+    await migrator.boot();
+
+    const result = await db.query(
+      "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public'"
+    );
+
+    expect(result.rows[0].count).toBe("2");
   });
 });
