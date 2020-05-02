@@ -37,7 +37,7 @@ export class Migrator {
     this.loadConfig();
     this.connectionPool = new Pool({
       ...this.config.connection,
-      idleTimeoutMillis: 0,
+      idleTimeoutMillis: 500,
     });
     await this.makeTables();
   }
@@ -97,7 +97,7 @@ export class Migrator {
         await client.query("ROLLBACK");
         throw err;
       } finally {
-        poolClient.release();
+        poolClient.release(true);
       }
 
       await this.insertMigration(type.name, migration.name);
@@ -133,7 +133,7 @@ export class Migrator {
         await client.query("ROLLBACK");
         throw err;
       } finally {
-        poolClient.release();
+        poolClient.release(true);
       }
 
       await this.removeMigration(type.name, migration.name);
