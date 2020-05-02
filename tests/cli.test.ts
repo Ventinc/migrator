@@ -109,9 +109,6 @@ describe("cli", () => {
     await cli(["create", "migrations", "create users table"]);
 
     const files = readdirSync(fs.basePath);
-    const file = readFileSync(fs.basePath + "/" + files[0]).toString();
-
-    console.log(file);
 
     expect(files).toHaveLength(1);
   });
