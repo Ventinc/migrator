@@ -4,6 +4,9 @@ import { PlatformTools } from "./utils";
 import { join } from "path";
 import { readdirSync, existsSync } from "fs";
 import { Migration } from "./Migration";
+import { Client } from "./Client";
+import { logger } from "./logger";
+import chalk from "chalk";
 
 interface MigrationConfig {
   name: string;
@@ -54,7 +57,26 @@ export class Migrator {
     );
 
     for (const migration of toMigrate) {
-      await migration.instance.up({} as any);
+      const poolClient = await this.connectionPool.connect();
+      const client = new Client(poolClient);
+
+      logger.log(
+        `${chalk.bgBlue.bold(
+          ` ${type.name.toUpperCase()} `
+        )}${chalk.bgGreen.bold(" UP ")}`,
+        chalk.bold(migration.name)
+      );
+
+      try {
+        await client.query("BEGIN");
+        await migration.instance.up(client);
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        poolClient.release();
+      }
 
       await this.insertMigration(type.name, migration.name);
     }
@@ -71,7 +93,26 @@ export class Migrator {
     );
 
     for (const migration of toMigrate) {
-      await migration.instance.down({} as any);
+      const poolClient = await this.connectionPool.connect();
+      const client = new Client(poolClient);
+
+      logger.log(
+        `${chalk.bgBlue.bold(` ${type.name.toUpperCase()} `)}${chalk.bgRed.bold(
+          " DOWN "
+        )}`,
+        chalk.bold(migration.name)
+      );
+
+      try {
+        await client.query("BEGIN");
+        await migration.instance.down(client);
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        poolClient.release();
+      }
 
       await this.removeMigration(type.name, migration.name);
     }

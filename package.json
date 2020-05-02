@@ -1,5 +1,5 @@
 {
-  "name": "@ventinc/pg-migrations",
+  "name": "@ventinc/migrator",
   "version": "1.0.0",
   "description": "A simple library to make migrations with postgres",
   "main": "index.js",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Ventinc/pg-migrations.git"
+    "url": "git+https://github.com/Ventinc/migrator.git"
   },
   "keywords": [
     "postgresql",
@@ -21,7 +21,7 @@
   "author": "Vincent Dusautoir",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Ventinc/pg-migrations/issues"
+    "url": "https://github.com/Ventinc/migrator/issues"
   },
   "homepage": "https://github.com/Ventinc/pg-migrations#readme",
   "devDependencies": {
@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "app-root-path": "^3.0.0",
+    "chalk": "^4.0.0",
     "clear-module": "^4.1.1",
     "pg": "^8.0.3"
   }

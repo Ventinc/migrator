@@ -1,4 +1,4 @@
-import { Client } from "pg";
+import { Client } from "./Client";
 
 export class Migration {
   name?: string;

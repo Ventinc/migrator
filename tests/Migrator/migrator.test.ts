@@ -76,7 +76,7 @@ describe("Migrator", () => {
       "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public'"
     );
 
-    await expect(result.rows[0].count).toBe("2");
+    expect(result.rows[0].count).toBe("2");
   });
 
   test("Add entry to database on migrations up", async () => {
@@ -105,7 +105,7 @@ describe("Migrator", () => {
 
     const migrationsResult = await db.query("SELECT COUNT(*) FROM migrations");
 
-    await expect(migrationsResult.rows[0].count).toBe("1");
+    expect(migrationsResult.rows[0].count).toBe("1");
   });
 
   test("Remove entry to database on migrations up", async () => {
@@ -135,7 +135,7 @@ describe("Migrator", () => {
 
     const migrationsResult = await db.query("SELECT COUNT(*) FROM migrations");
 
-    await expect(migrationsResult.rows[0].count).toBe("0");
+    expect(migrationsResult.rows[0].count).toBe("0");
   });
 
   test("Full test with add and remove with batch value", async () => {
@@ -182,7 +182,7 @@ describe("Migrator", () => {
       "SELECT COUNT(*) FROM migrations"
     );
 
-    await expect(migrationsUpResult1.rows[0].count).toBe("2");
+    expect(migrationsUpResult1.rows[0].count).toBe("2");
 
     await migrator.executeMigrations("down");
 
@@ -190,7 +190,7 @@ describe("Migrator", () => {
       "SELECT COUNT(*) FROM migrations"
     );
 
-    await expect(migrationsDownResult1.rows[0].count).toBe("1");
+    expect(migrationsDownResult1.rows[0].count).toBe("1");
 
     await migrator.executeMigrations("up");
 
@@ -198,7 +198,7 @@ describe("Migrator", () => {
       "SELECT COUNT(*) FROM migrations"
     );
 
-    await expect(migrationsUpResult2.rows[0].count).toBe("2");
+    expect(migrationsUpResult2.rows[0].count).toBe("2");
 
     await migrator.executeMigrations("down", "migrations", 200304);
 
@@ -206,6 +206,185 @@ describe("Migrator", () => {
       "SELECT COUNT(*) FROM migrations"
     );
 
-    await expect(migrationsDownResult2.rows[0].count).toBe("0");
+    expect(migrationsDownResult2.rows[0].count).toBe("0");
+  });
+
+  test("Create users table in database on migrations up", async () => {
+    const migrator = getMigrator();
+
+    await migrator.boot();
+
+    const timestamp1 = Date.now();
+
+    await fs.add(
+      `${timestamp1}-AddTableUser.ts`,
+      `
+      import { Migration, Client } from '/usr/src/app/src'
+
+      export default class AddTableUser${timestamp1} implements Migration {
+        async up(client: Client) {
+          await client.query(\`CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL 
+          )\`);
+        }
+
+        async down(client: Client) {
+          await client.query("DROP TABLE users");
+        }
+      }
+      `
+    );
+
+    await migrator.executeMigrations("up");
+
+    const migrationsResult = await db.query("SELECT COUNT(*) FROM migrations");
+    const userTableResult = await db.query(
+      "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public' AND tablename='users';"
+    );
+
+    expect(migrationsResult.rows[0].count).toBe("1");
+    expect(userTableResult.rows[0].count).toBe("1");
+  });
+
+  test("Remove users table in database on migrations down", async () => {
+    const migrator = getMigrator();
+
+    await migrator.boot();
+
+    const timestamp1 = Date.now();
+
+    await fs.add(
+      `${timestamp1}-AddTableUser.ts`,
+      `
+      import { Migration, Client } from '/usr/src/app/src'
+
+      export default class AddTableUser${timestamp1} implements Migration {
+        async up(client: Client) {
+          await client.query(\`CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL 
+          )\`);
+        }
+
+        async down(client: Client) {
+          await client.query("DROP TABLE users");
+        }
+      }
+      `
+    );
+
+    await migrator.executeMigrations("up");
+
+    const migrationsResultUp = await db.query(
+      "SELECT COUNT(*) FROM migrations"
+    );
+    const userTableResultUp = await db.query(
+      "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public' AND tablename='users';"
+    );
+
+    expect(migrationsResultUp.rows[0].count).toBe("1");
+    expect(userTableResultUp.rows[0].count).toBe("1");
+
+    await migrator.executeMigrations("down");
+
+    const migrationsResultDown = await db.query(
+      "SELECT COUNT(*) FROM migrations"
+    );
+    const userTableResultDown = await db.query(
+      "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public' AND tablename='users';"
+    );
+
+    expect(migrationsResultDown.rows[0].count).toBe("0");
+    expect(userTableResultDown.rows[0].count).toBe("0");
+  });
+
+  test("Rollback when error on up", async () => {
+    const migrator = getMigrator();
+
+    await migrator.boot();
+
+    const timestamp1 = Date.now();
+
+    await fs.add(
+      `${timestamp1}-AddTableUser.ts`,
+      `
+      import { Migration, Client } from '/usr/src/app/src'
+
+      export default class AddTableUser${timestamp1} implements Migration {
+        async up(client: Client) {
+          await client.query(\`CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL 
+          )\`);
+
+          await client.query("SELECT * FROM toto");
+        }
+
+        async down(client: Client) {
+          await client.query("DROP TABLE users");
+        }
+      }
+      `
+    );
+
+    expect(
+      async () => await migrator.executeMigrations("up")
+    ).rejects.toThrow();
+
+    const migrationsResult = await db.query("SELECT COUNT(*) FROM migrations");
+    const userTableResult = await db.query(
+      "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public' AND tablename='users';"
+    );
+
+    expect(migrationsResult.rows[0].count).toBe("0");
+    expect(userTableResult.rows[0].count).toBe("0");
+  });
+
+  test("Rollback when error on down", async () => {
+    const migrator = getMigrator();
+
+    await migrator.boot();
+
+    const timestamp1 = Date.now();
+
+    await fs.add(
+      `${timestamp1}-AddTableUser.ts`,
+      `
+      import { Migration, Client } from '/usr/src/app/src'
+
+      export default class AddTableUser${timestamp1} implements Migration {
+        async up(client: Client) {
+          await client.query(\`CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL 
+          )\`);
+        }
+        
+        async down(client: Client) {
+          await client.query("DROP TABLE users");
+          await client.query("SELECT * FROM toto");
+        }
+      }
+      `
+    );
+
+    await migrator.executeMigrations("up");
+
+    expect(
+      async () => await migrator.executeMigrations("down")
+    ).rejects.toThrow();
+
+    const migrationsResult = await db.query("SELECT COUNT(*) FROM migrations");
+    const userTableResult = await db.query(
+      "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public' AND tablename='users';"
+    );
+
+    expect(migrationsResult.rows[0].count).toBe("1");
+    expect(userTableResult.rows[0].count).toBe("1");
   });
 });
