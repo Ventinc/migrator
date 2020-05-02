@@ -35,7 +35,6 @@ export class Migrator {
 
   async boot() {
     this.loadConfig();
-    this.connectionPool = new Pool(this.config.connection);
     await this.makeTables();
   }
 
@@ -53,15 +52,21 @@ export class Migrator {
   ) {
     const type = this.getType(name);
 
-    if (!type) {
-      throw new Error(`No configuration named: "${name}"`);
-    }
-    const migrations = await this.getMigrations(type);
+    try {
+      if (!type) {
+        throw new Error(`No configuration named: "${name}"`);
+      }
+      const migrations = await this.getMigrations(type);
 
-    if (direction === "up") {
-      await this.runUp(migrations, type);
-    } else {
-      await this.runDown(migrations, batch, type);
+      if (direction === "up") {
+        await this.runUp(migrations, type);
+      } else {
+        await this.runDown(migrations, batch, type);
+      }
+    } catch (err) {
+      throw err;
+    } finally {
+      await this.connectionPool.end();
     }
   }
 
