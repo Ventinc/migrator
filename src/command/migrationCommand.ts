@@ -1,17 +1,12 @@
 import { Migrator } from "../Migrator";
+import { createMigrator } from "./createMigrator";
 
 export async function migrationCommand(
   direction: "up" | "down",
   typename: string,
   options: any
 ) {
-  const { parent: parentOptions } = options;
-  const migratorOptions = {
-    root: parentOptions.configDir,
-    configName: parentOptions.configName,
-  };
-
-  const migrator = new Migrator(migratorOptions);
+  const migrator = createMigrator(options);
 
   await migrator.boot();
 

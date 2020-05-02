@@ -1,4 +1,5 @@
 import { cli, getDb, fs, cleanup, setupTmpConfig } from "../test-helpers";
+import { readdirSync, readFileSync } from "fs";
 
 let db: ReturnType<typeof getDb>;
 
@@ -102,5 +103,16 @@ describe("cli", () => {
 
     expect(migrationsResultDown.rows[0].count).toBe("0");
     expect(userTableResultDown.rows[0].count).toBe("0");
+  });
+
+  test("Create migration", async () => {
+    await cli(["create", "migrations", "create users table"]);
+
+    const files = readdirSync(fs.basePath);
+    const file = readFileSync(fs.basePath + "/" + files[0]).toString();
+
+    console.log(file);
+
+    expect(files).toHaveLength(1);
   });
 });

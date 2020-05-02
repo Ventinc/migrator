@@ -1,5 +1,6 @@
 import { program } from "commander";
 import { migrationCommand } from "./migrationCommand";
+import { createMigration } from "./createMigration";
 
 export const migratorProgram = program
   .version("1.0.0")
@@ -21,3 +22,8 @@ migratorProgram
     1
   )
   .action((typename, options) => migrationCommand("down", typename, options));
+
+migratorProgram
+  .command("create <typename> <name>")
+  .description("Create a migration file")
+  .action(createMigration);

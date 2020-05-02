@@ -30,13 +30,13 @@
     "@types/jest": "^25.2.1",
     "@types/node": "^13.13.4",
     "@types/pg": "^7.14.3",
-    "fs-extra": "^9.0.0",
     "jest": "^25.5.1",
     "rimraf": "^3.0.2",
     "ts-jest": "^25.4.0",
     "typescript": "^3.8.3"
   },
   "dependencies": {
+    "fs-extra": "^9.0.0",
     "app-root-path": "^3.0.0",
     "chalk": "^4.0.0",
     "clear-module": "^4.1.1",

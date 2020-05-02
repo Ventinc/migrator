@@ -46,6 +46,25 @@ export class Migrator {
     this.config = PlatformTools.esmRequire(join(root, configName));
   }
 
+  async executeMigrations(
+    direction: "up" | "down" = "up",
+    name: string = "migrations",
+    batch: number = 1
+  ) {
+    const type = this.getType(name);
+
+    if (!type) {
+      throw new Error(`No configuration named: "${name}"`);
+    }
+    const migrations = await this.getMigrations(type);
+
+    if (direction === "up") {
+      await this.runUp(migrations, type);
+    } else {
+      await this.runDown(migrations, batch, type);
+    }
+  }
+
   private async runUp(
     migrations: MigrationInformation[],
     type: MigrationConfig
@@ -118,29 +137,6 @@ export class Migrator {
     }
   }
 
-  async executeMigrations(
-    direction: "up" | "down" = "up",
-    name: string = "migrations",
-    batch: number = 1
-  ) {
-    const type = this.getType(name);
-
-    if (!type) {
-      throw new Error(`No configuration named: "${name}"`);
-    }
-    const migrations = await this.getMigrations(type);
-
-    if (direction === "up") {
-      await this.runUp(migrations, type);
-    } else {
-      await this.runDown(migrations, batch, type);
-    }
-  }
-
-  createMigration(name: string) {
-    console.log(`create migration ${name}`);
-  }
-
   private async insertMigration(tableName: string, name: string) {
     const query = `INSERT INTO ${tableName}(name) VALUES ($1)`;
 
@@ -165,7 +161,7 @@ export class Migrator {
     }
   }
 
-  private getType(name: string) {
+  getType(name: string) {
     return this.config.types.find((type) => type.name === name);
   }
 
