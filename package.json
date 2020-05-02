@@ -2,7 +2,13 @@
   "name": "@ventinc/migrator",
   "version": "1.0.0",
   "description": "A simple library to make migrations with postgres",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "migrator": "./dist/cli.js"
+  },
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "tsc",
@@ -23,7 +29,7 @@
   "bugs": {
     "url": "https://github.com/Ventinc/migrator/issues"
   },
-  "homepage": "https://github.com/Ventinc/pg-migrations#readme",
+  "homepage": "https://github.com/Ventinc/migrator#readme",
   "devDependencies": {
     "@types/app-root-path": "^1.2.4",
     "@types/fs-extra": "^8.1.0",
