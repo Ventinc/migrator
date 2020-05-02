@@ -1,12 +1,11 @@
-import { Migrator } from "../../src/Migrator";
+import { Migrator } from "../src/Migrator";
 import {
   getDb,
   getMigrator,
   cleanup,
   fs,
   getMigratorMultiple,
-} from "../../test-helpers";
-import { readdirSync, ensureDir } from "fs-extra";
+} from "../test-helpers";
 
 describe("Config Reader", () => {
   beforeEach(() => {
@@ -77,6 +76,16 @@ describe("Migrator", () => {
     );
 
     expect(result.rows[0].count).toBe("2");
+  });
+
+  test("Run type that does not exist throw an error", async () => {
+    const migrator = getMigrator();
+
+    await migrator.boot();
+
+    expect(
+      async () => await migrator.executeMigrations("up", "toto")
+    ).rejects.toThrow();
   });
 
   test("Add entry to database on migrations up", async () => {

@@ -1,8 +1,9 @@
 import fsExtra from "fs-extra";
-import { join, isAbsolute } from "path";
+import path, { join, isAbsolute } from "path";
 import { tmpdir } from "os";
 import { PoolConfig, Pool } from "pg";
 import { Migrator } from "../src/Migrator";
+import { migratorProgram } from "../src/command";
 
 export const dbConfig: PoolConfig = {
   user: "pgmigrations",
@@ -79,6 +80,31 @@ export function getMigratorMultiple() {
   });
 }
 
+const tmpFs = new FileSystem(tmpdir());
+
+export function setupTmpConfig() {
+  return tmpFs.add(
+    "migrations.config.js",
+    `
+  module.exports = {
+    connection: {
+      user: "pgmigrations",
+      host: "pg",
+      database: "pgmigrations",
+      password: "password",
+      port: 5432,
+    },
+    types: [
+      {
+        name: "migrations",
+        folder: "${fs.basePath}",
+      },
+    ],
+  };
+  `
+  );
+}
+
 export async function cleanup() {
   fs.cleanup();
   const db = getDb();
@@ -92,4 +118,18 @@ export async function cleanup() {
   }
 
   await db.end();
+}
+
+export function cli(args: string[]) {
+  process.argv = [
+    "node",
+    "cli",
+    "-cd",
+    `${tmpdir()}`,
+    "-cn",
+    "migrations.config.js",
+    ...args,
+  ];
+
+  return migratorProgram.parseAsync(process.argv);
 }
